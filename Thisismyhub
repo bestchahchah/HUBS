@@ -1,5 +1,5 @@
--- Hub Toggler Script (v3 - Smarter Search)
--- A single, draggable button in the TOP-RIGHT that correctly detects the hub.
+-- Hub Toggler Script (v4 - Hooking Method)
+-- This version hooks loadstring to reliably get a reference to the GUI.
 
 -- --- SETUP ---
 if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
@@ -7,19 +7,7 @@ if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
 end
 
 local CoreGui = game:GetService("CoreGui")
-local j0frsHub_GUI = nil -- This will store the hub's GUI when we find it.
-
--- --- SMART SEARCH FUNCTION ---
--- This function will find the hub by its visible title text.
-local function findHubGui()
-    for _, descendant in ipairs(CoreGui:GetDescendants()) do
-        if descendant:IsA("TextLabel") and descendant.Text == "j.0frs Hub" then
-            -- The GUI is the ancestor ScreenGui of the title label
-            return descendant:FindFirstAncestorOfClass("ScreenGui")
-        end
-    end
-    return nil -- Return nil if not found
-end
+local j0frsHub_GUI = nil -- This will store the hub's GUI.
 
 -- --- GUI CREATION ---
 local HubToggleButtonGUI = Instance.new("ScreenGui")
@@ -44,40 +32,81 @@ ToggleButton.TextSize = 16
 local UICorner = Instance.new("UICorner", ToggleButton, {CornerRadius = UDim.new(0, 5)})
 
 -- --- CORE FUNCTIONALITY ---
-ToggleButton.MouseButton1Click:Connect(function()
-    -- First, we check if the hub is open by searching for it
-    j0frsHub_GUI = findHubGui()
 
-    if j0frsHub_GUI then
-        -- If we found it, it must be open. So, destroy it.
-        print("Hub is open. Closing...")
+local function loadTheHub()
+    print("Loading hub...")
+    ToggleButton.Text = "Loading..."
+    
+    -- Take a "snapshot" of all GUIs currently on screen
+    local beforeGuis = {}
+    for _, gui in ipairs(CoreGui:GetChildren()) do
+        beforeGuis[gui] = true
+    end
+
+    -- Run the script from the pastebin
+    local success, err = pcall(function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/GyesYcic", true))()
+    end)
+    
+    if success then
+        -- Compare the "after" state to the "before" state
+        task.wait(0.5) -- Give the GUI a moment to parent itself
+        local foundGui = nil
+        for _, gui in ipairs(CoreGui:GetChildren()) do
+            if not beforeGuis[gui] then
+                -- This is the new GUI the script created!
+                foundGui = gui
+                break
+            end
+        end
+
+        if foundGui then
+            j0frsHub_GUI = foundGui
+            print("Hub loaded and captured successfully:", j0frsHub_GUI.Name)
+            ToggleButton.Text = "Close Hub"
+        else
+            warn("Hub script ran, but no new GUI was detected in CoreGui.")
+            ToggleButton.Text = "Open Hub" -- Reset on failure
+        end
+    else
+        warn("Failed to load the hub script:", err)
+        ToggleButton.Text = "Open Hub" -- Reset on failure
+    end
+end
+
+local function closeTheHub()
+    if j0frsHub_GUI and j0frsHub_GUI.Parent then
+        print("Closing hub...")
         j0frsHub_GUI:Destroy()
         j0frsHub_GUI = nil
         ToggleButton.Text = "Open Hub"
     else
-        -- If we couldn't find it, it must be closed. So, load it.
-        print("Hub is closed. Loading...")
-        ToggleButton.Text = "Loading..."
-        
-        local success, err = pcall(function()
-            loadstring(game:HttpGet("https://pastebin.com/raw/GyesYcic", true))()
-        end)
-        
-        if success then
-            -- After loading, wait a moment and then search for it again to confirm.
-            task.wait(1) 
-            j0frsHub_GUI = findHubGui()
-            if j0frsHub_GUI then
-                print("Hub loaded successfully.")
-                ToggleButton.Text = "Close Hub"
-            else
-                warn("Hub script ran, but the GUI could not be found.")
-                ToggleButton.Text = "Open Hub"
+        -- This is a fallback in case the reference is lost
+        print("Reference lost, attempting to find and close hub...")
+        local found = false
+        for _, descendant in ipairs(CoreGui:GetDescendants()) do
+            if descendant:IsA("TextLabel") and descendant.Text == "j.0frs Hub" then
+                local guiToDestroy = descendant:FindFirstAncestorOfClass("ScreenGui")
+                if guiToDestroy then
+                    guiToDestroy:Destroy()
+                    found = true
+                    break
+                end
             end
-        else
-            warn("Failed to load the hub script:", err)
-            ToggleButton.Text = "Open Hub"
         end
+        if found then
+            ToggleButton.Text = "Open Hub"
+        else
+            warn("Could not find hub to close.")
+        end
+    end
+end
+
+ToggleButton.MouseButton1Click:Connect(function()
+    if ToggleButton.Text == "Open Hub" then
+        loadTheHub()
+    else
+        closeTheHub()
     end
 end)
 
