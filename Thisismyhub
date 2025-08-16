@@ -1,5 +1,5 @@
--- Hub Toggler Script (v2)
--- A single, draggable button in the TOP-RIGHT to open and close the j.0frs Hub.
+-- Hub Toggler Script (v3 - Smarter Search)
+-- A single, draggable button in the TOP-RIGHT that correctly detects the hub.
 
 -- --- SETUP ---
 if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
@@ -7,7 +7,19 @@ if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
 end
 
 local CoreGui = game:GetService("CoreGui")
-local j0frsHub_GUI = nil -- This variable will store the hub's GUI when it's open.
+local j0frsHub_GUI = nil -- This will store the hub's GUI when we find it.
+
+-- --- SMART SEARCH FUNCTION ---
+-- This function will find the hub by its visible title text.
+local function findHubGui()
+    for _, descendant in ipairs(CoreGui:GetDescendants()) do
+        if descendant:IsA("TextLabel") and descendant.Text == "j.0frs Hub" then
+            -- The GUI is the ancestor ScreenGui of the title label
+            return descendant:FindFirstAncestorOfClass("ScreenGui")
+        end
+    end
+    return nil -- Return nil if not found
+end
 
 -- --- GUI CREATION ---
 local HubToggleButtonGUI = Instance.new("ScreenGui")
@@ -20,12 +32,7 @@ local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Parent = HubToggleButtonGUI
 ToggleButton.Size = UDim2.new(0, 120, 0, 40)
-
--- --- THE FIX IS HERE ---
--- Positioned at 100% right, minus the button's width (120) and a 10px margin.
-ToggleButton.Position = UDim2.new(1, -130, 0, 10) 
--- ----------------------
-
+ToggleButton.Position = UDim2.new(1, -130, 0, 10) -- Top-right corner
 ToggleButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
 ToggleButton.BorderSizePixel = 0
 ToggleButton.Draggable = true
@@ -38,15 +45,17 @@ local UICorner = Instance.new("UICorner", ToggleButton, {CornerRadius = UDim.new
 
 -- --- CORE FUNCTIONALITY ---
 ToggleButton.MouseButton1Click:Connect(function()
-    -- Check if the hub is currently open
-    if j0frsHub_GUI and j0frsHub_GUI.Parent then
-        -- If it's open, destroy it.
+    -- First, we check if the hub is open by searching for it
+    j0frsHub_GUI = findHubGui()
+
+    if j0frsHub_GUI then
+        -- If we found it, it must be open. So, destroy it.
         print("Hub is open. Closing...")
         j0frsHub_GUI:Destroy()
-        j0frsHub_GUI = nil -- Reset the variable
+        j0frsHub_GUI = nil
         ToggleButton.Text = "Open Hub"
     else
-        -- If it's closed, load the script.
+        -- If we couldn't find it, it must be closed. So, load it.
         print("Hub is closed. Loading...")
         ToggleButton.Text = "Loading..."
         
@@ -55,14 +64,14 @@ ToggleButton.MouseButton1Click:Connect(function()
         end)
         
         if success then
-            task.wait(0.5)
-            j0frsHub_GUI = CoreGui:FindFirstChild("j0frs_main")
-            
+            -- After loading, wait a moment and then search for it again to confirm.
+            task.wait(1) 
+            j0frsHub_GUI = findHubGui()
             if j0frsHub_GUI then
                 print("Hub loaded successfully.")
                 ToggleButton.Text = "Close Hub"
             else
-                warn("Hub script ran, but could not find the GUI.")
+                warn("Hub script ran, but the GUI could not be found.")
                 ToggleButton.Text = "Open Hub"
             end
         else
