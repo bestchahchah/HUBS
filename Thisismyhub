@@ -1,5 +1,5 @@
--- Hub Toggler Script (v5 - State Saving Edition)
--- This version saves the state of toggles and restores them when the hub is reopened.
+-- Hub Toggler Script (v6 - Visibility Toggle)
+-- This version hides and shows the hub instead of destroying and reloading it, preserving its internal state.
 
 -- --- SETUP ---
 if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
@@ -8,7 +8,6 @@ end
 
 local CoreGui = game:GetService("CoreGui")
 local j0frsHub_GUI = nil -- This will store the hub's GUI.
-local savedStates = {} -- This table will store the ON/OFF state of the toggles.
 
 -- --- GUI CREATION ---
 local HubToggleButtonGUI = Instance.new("ScreenGui")
@@ -33,100 +32,54 @@ ToggleButton.TextSize = 16
 local UICorner = Instance.new("UICorner", ToggleButton, {CornerRadius = UDim.new(0, 5)})
 
 -- --- CORE FUNCTIONALITY ---
-
-local function hookAndApplyStates(hubGui)
-    -- Find all the toggle buttons inside the hub
-    local container = hubGui:FindFirstChild("Container", true)
-    if not container then return end
-
-    for _, descendant in ipairs(container:GetDescendants()) do
-        -- We are looking for the 'Label' inside the toggle, as its text changes
-        if descendant:IsA("TextLabel") and (descendant.Text == "ON" or descendant.Text == "OFF") then
-            local featureButton = descendant.Parent
-            local featureName = featureButton.Parent.Name -- e.g., "RapidFire"
-
-            -- 1. Apply the saved state if it exists
-            if savedStates[featureName] ~= nil then
-                -- We need to check the current state and click the button if it doesn't match
-                local currentState = descendant.Text == "ON"
-                if currentState ~= savedStates[featureName] then
-                    -- This simulates a click on the button to change its state
-                    if featureButton.MouseButton1Click then
-                        featureButton.MouseButton1Click:Fire()
-                    end
+ToggleButton.MouseButton1Click:Connect(function()
+    -- Check if the hub exists at all
+    if j0frsHub_GUI and j0frsHub_GUI.Parent then
+        -- If it exists, just toggle its visibility
+        j0frsHub_GUI.Enabled = not j0frsHub_GUI.Enabled
+        
+        -- Update the button text based on the new visibility state
+        if j0frsHub_GUI.Enabled then
+            ToggleButton.Text = "Close Hub"
+            print("Hub is now visible.")
+        else
+            ToggleButton.Text = "Open Hub"
+            print("Hub is now hidden.")
+        end
+    else
+        -- If the hub doesn't exist, this is the first time we're opening it.
+        print("Hub not found. Loading for the first time...")
+        ToggleButton.Text = "Loading..."
+        
+        local success, err = pcall(function()
+            loadstring(game:HttpGet("https://pastebin.com/raw/GyesYcic", true))()
+        end)
+        
+        if success then
+            task.wait(0.5)
+            -- Find the newly created hub
+            local foundGui = nil
+            for _, descendant in ipairs(CoreGui:GetDescendants()) do
+                if descendant:IsA("TextLabel") and descendant.Text == "j.0frs Hub" then
+                    foundGui = descendant:FindFirstAncestorOfClass("ScreenGui")
+                    break
                 end
             end
 
-            -- 2. Hook into the button to save future changes
-            featureButton.MouseButton1Click:Connect(function()
-                -- Wait a moment for the text to update
-                task.wait() 
-                local newState = descendant.Text == "ON"
-                print(string.format("State Changed: %s is now %s", featureName, newState and "ON" or "OFF"))
-                savedStates[featureName] = newState -- Save the new state
-            end)
-        end
-    end
-    print("Successfully hooked into hub toggles to save their state.")
-end
-
-local function loadTheHub()
-    print("Loading hub...")
-    ToggleButton.Text = "Loading..."
-    
-    local beforeGuis = {}
-    for _, gui in ipairs(CoreGui:GetChildren()) do beforeGuis[gui] = true end
-
-    local success, err = pcall(function()
-        loadstring(game:HttpGet("https://pastebin.com/raw/GyesYcic", true))()
-    end)
-    
-    if success then
-        task.wait(0.5)
-        local foundGui = nil
-        for _, gui in ipairs(CoreGui:GetChildren()) do
-            if not beforeGuis[gui] then
-                foundGui = gui
-                break
+            if foundGui then
+                j0frsHub_GUI = foundGui
+                j0frsHub_GUI.Enabled = true -- Make sure it's visible
+                print("Hub loaded successfully.")
+                ToggleButton.Text = "Close Hub"
+            else
+                warn("Hub script ran, but the GUI could not be found.")
+                ToggleButton.Text = "Open Hub"
             end
-        end
-
-        if foundGui then
-            j0frsHub_GUI = foundGui
-            print("Hub loaded and captured successfully:", j0frsHub_GUI.Name)
-            ToggleButton.Text = "Close Hub"
-            
-            -- After loading, apply our saved states and set up the hooks
-            hookAndApplyStates(j0frsHub_GUI)
         else
-            warn("Hub script ran, but no new GUI was detected.")
+            warn("Failed to load the hub script:", err)
             ToggleButton.Text = "Open Hub"
         end
-    else
-        warn("Failed to load the hub script:", err)
-        ToggleButton.Text = "Open Hub"
-    end
-end
-
-local function closeTheHub()
-    if j0frsHub_GUI and j0frsHub_GUI.Parent then
-        print("Closing hub...")
-        j0frsHub_GUI:Destroy()
-        j0frsHub_GUI = nil
-        ToggleButton.Text = "Open Hub"
-    else
-        ToggleButton.Text = "Open Hub" -- Failsafe
-        warn("Could not find hub to close. Resetting button.")
-    end
-
-end
-
-ToggleButton.MouseButton1Click:Connect(function()
-    if ToggleButton.Text == "Open Hub" then
-        loadTheHub()
-    else
-        closeTheHub()
     end
 end)
 
-print("Hub Toggle Button (State Saving Edition) loaded.")
+print("Hub Toggle Button (Visibility Edition) loaded.")
