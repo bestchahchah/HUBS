@@ -1,8 +1,7 @@
--- Hub Toggler Script
--- A single, draggable button to open and close the j.0frs Hub.
+-- Hub Toggler Script (v2)
+-- A single, draggable button in the TOP-RIGHT to open and close the j.0frs Hub.
 
 -- --- SETUP ---
--- A check to prevent the script from running more than once and creating duplicate buttons.
 if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
     game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI"):Destroy()
 end
@@ -21,10 +20,15 @@ local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Parent = HubToggleButtonGUI
 ToggleButton.Size = UDim2.new(0, 120, 0, 40)
-ToggleButton.Position = UDim2.new(0, 10, 0, 10) -- Start at top-left
+
+-- --- THE FIX IS HERE ---
+-- Positioned at 100% right, minus the button's width (120) and a 10px margin.
+ToggleButton.Position = UDim2.new(1, -130, 0, 10) 
+-- ----------------------
+
 ToggleButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
 ToggleButton.BorderSizePixel = 0
-ToggleButton.Draggable = true -- Makes the button easy to move around
+ToggleButton.Draggable = true
 ToggleButton.Active = true
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.Text = "Open Hub"
@@ -34,39 +38,36 @@ local UICorner = Instance.new("UICorner", ToggleButton, {CornerRadius = UDim.new
 
 -- --- CORE FUNCTIONALITY ---
 ToggleButton.MouseButton1Click:Connect(function()
-    -- Check if the hub is currently open. We also check if its parent is nil,
-    -- in case it was closed by another script or by an in-hub close button.
+    -- Check if the hub is currently open
     if j0frsHub_GUI and j0frsHub_GUI.Parent then
         -- If it's open, destroy it.
         print("Hub is open. Closing...")
         j0frsHub_GUI:Destroy()
-        j0frsHub_GUI = nil -- Set the variable to nil so we know it's closed
-        ToggleButton.Text = "Open Hub" -- Update the button text
+        j0frsHub_GUI = nil -- Reset the variable
+        ToggleButton.Text = "Open Hub"
     else
         -- If it's closed, load the script.
         print("Hub is closed. Loading...")
-        ToggleButton.Text = "Loading..." -- Give user feedback
+        ToggleButton.Text = "Loading..."
         
         local success, err = pcall(function()
             loadstring(game:HttpGet("https://pastebin.com/raw/GyesYcic", true))()
         end)
         
         if success then
-            -- Wait a moment for the GUI to appear
             task.wait(0.5)
-            -- Find the newly created GUI and store it in our variable
             j0frsHub_GUI = CoreGui:FindFirstChild("j0frs_main")
             
             if j0frsHub_GUI then
                 print("Hub loaded successfully.")
-                ToggleButton.Text = "Close Hub" -- Update the button text
+                ToggleButton.Text = "Close Hub"
             else
-                warn("Hub script ran, but could not find the GUI. It might have a new name.")
-                ToggleButton.Text = "Open Hub" -- Reset button text on failure
+                warn("Hub script ran, but could not find the GUI.")
+                ToggleButton.Text = "Open Hub"
             end
         else
             warn("Failed to load the hub script:", err)
-            ToggleButton.Text = "Open Hub" -- Reset button text on failure
+            ToggleButton.Text = "Open Hub"
         end
     end
 end)
