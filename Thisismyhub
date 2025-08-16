@@ -1,5 +1,5 @@
--- Hub Toggler Script (v6 - Visibility Toggle)
--- This version hides and shows the hub instead of destroying and reloading it, preserving its internal state.
+-- Hub Toggler Script (v7 - Auto Resizing Edition)
+-- This version hides/shows the hub and automatically resizes it for a better mobile fit.
 
 -- --- SETUP ---
 if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
@@ -38,7 +38,6 @@ ToggleButton.MouseButton1Click:Connect(function()
         -- If it exists, just toggle its visibility
         j0frsHub_GUI.Enabled = not j0frsHub_GUI.Enabled
         
-        -- Update the button text based on the new visibility state
         if j0frsHub_GUI.Enabled then
             ToggleButton.Text = "Close Hub"
             print("Hub is now visible.")
@@ -57,7 +56,6 @@ ToggleButton.MouseButton1Click:Connect(function()
         
         if success then
             task.wait(0.5)
-            -- Find the newly created hub
             local foundGui = nil
             for _, descendant in ipairs(CoreGui:GetDescendants()) do
                 if descendant:IsA("TextLabel") and descendant.Text == "j.0frs Hub" then
@@ -68,7 +66,22 @@ ToggleButton.MouseButton1Click:Connect(function()
 
             if foundGui then
                 j0frsHub_GUI = foundGui
-                j0frsHub_GUI.Enabled = true -- Make sure it's visible
+                
+                -- --- THIS IS THE NEW RESIZING CODE ---
+                local mainFrame = j0frsHub_GUI:FindFirstChild("MainFrame", true)
+                if mainFrame then
+                    print("Hub found. Resizing for mobile.")
+                    -- New dimensions (Wider and Shorter)
+                    local newWidth = 600 
+                    local newHeight = 350 
+                    
+                    mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+                    -- Re-center the frame after resizing
+                    mainFrame.Position = UDim2.new(0.5, -newWidth / 2, 0.5, -newHeight / 2)
+                end
+                -- ------------------------------------
+
+                j0frsHub_GUI.Enabled = true
                 print("Hub loaded successfully.")
                 ToggleButton.Text = "Close Hub"
             else
@@ -82,4 +95,4 @@ ToggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
-print("Hub Toggle Button (Visibility Edition) loaded.")
+print("Hub Toggle Button (Auto Resizing Edition) loaded.")
