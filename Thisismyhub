@@ -1,5 +1,5 @@
--- Hub Toggler Script (v7 - Auto Resizing Edition)
--- This version hides/shows the hub and automatically resizes it for a better mobile fit.
+-- Hub Toggler Script (v8 - Two Column Layout)
+-- Automatically rearranges the hub's content into two columns for a perfect mobile fit.
 
 -- --- SETUP ---
 if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
@@ -7,7 +7,7 @@ if game:GetService("CoreGui"):FindFirstChild("HubToggleButtonGUI") then
 end
 
 local CoreGui = game:GetService("CoreGui")
-local j0frsHub_GUI = nil -- This will store the hub's GUI.
+local j0frsHub_GUI = nil
 
 -- --- GUI CREATION ---
 local HubToggleButtonGUI = Instance.new("ScreenGui")
@@ -20,11 +20,9 @@ local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Parent = HubToggleButtonGUI
 ToggleButton.Size = UDim2.new(0, 120, 0, 40)
-ToggleButton.Position = UDim2.new(1, -130, 0, 10) -- Top-right corner
+ToggleButton.Position = UDim2.new(1, -130, 0, 10) -- Top-right
 ToggleButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
-ToggleButton.BorderSizePixel = 0
 ToggleButton.Draggable = true
-ToggleButton.Active = true
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.Text = "Open Hub"
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -33,66 +31,77 @@ local UICorner = Instance.new("UICorner", ToggleButton, {CornerRadius = UDim.new
 
 -- --- CORE FUNCTIONALITY ---
 ToggleButton.MouseButton1Click:Connect(function()
-    -- Check if the hub exists at all
     if j0frsHub_GUI and j0frsHub_GUI.Parent then
-        -- If it exists, just toggle its visibility
         j0frsHub_GUI.Enabled = not j0frsHub_GUI.Enabled
-        
-        if j0frsHub_GUI.Enabled then
-            ToggleButton.Text = "Close Hub"
-            print("Hub is now visible.")
-        else
-            ToggleButton.Text = "Open Hub"
-            print("Hub is now hidden.")
-        end
+        ToggleButton.Text = j0frsHub_GUI.Enabled and "Close Hub" or "Open Hub"
     else
-        -- If the hub doesn't exist, this is the first time we're opening it.
-        print("Hub not found. Loading for the first time...")
+        print("Hub not found. Loading...")
         ToggleButton.Text = "Loading..."
         
-        local success, err = pcall(function()
-            loadstring(game:HttpGet("https://pastebin.com/raw/GyesYcic", true))()
-        end)
+        pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/GyesYcic", true))() end)
         
-        if success then
-            task.wait(0.5)
-            local foundGui = nil
-            for _, descendant in ipairs(CoreGui:GetDescendants()) do
-                if descendant:IsA("TextLabel") and descendant.Text == "j.0frs Hub" then
-                    foundGui = descendant:FindFirstAncestorOfClass("ScreenGui")
-                    break
-                end
+        task.wait(0.5)
+        local foundGui = nil
+        for _, d in ipairs(CoreGui:GetDescendants()) do
+            if d:IsA("TextLabel") and d.Text == "j.0frs Hub" then
+                foundGui = d:FindFirstAncestorOfClass("ScreenGui")
+                break
             end
+        end
 
-            if foundGui then
-                j0frsHub_GUI = foundGui
+        if foundGui then
+            j0frsHub_GUI = foundGui
+            
+            -- --- NEW TWO-COLUMN LAYOUT FIX ---
+            local container = j0frsHub_GUI:FindFirstChild("Container", true)
+            local mainTab = container and container:FindFirstChild("Main")
+            
+            if mainTab and mainTab:FindFirstChildOfClass("UIListLayout") then
+                print("Hub found. Applying two-column layout fix...")
                 
-                -- --- THIS IS THE NEW RESIZING CODE ---
-                local mainFrame = j0frsHub_GUI:FindFirstChild("MainFrame", true)
-                if mainFrame then
-                    print("Hub found. Resizing for mobile.")
-                    -- New dimensions (Wider and Shorter)
-                    local newWidth = 600 
-                    local newHeight = 350 
-                    
-                    mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
-                    -- Re-center the frame after resizing
-                    mainFrame.Position = UDim2.new(0.5, -newWidth / 2, 0.5, -newHeight / 2)
+                -- Change the main tab to hold two column frames
+                mainTab.UIListLayout.Parent = nil -- Remove the old vertical layout
+                
+                -- Create Left Column
+                local LeftColumn = Instance.new("Frame", mainTab)
+                LeftColumn.Name = "LeftColumn"
+                LeftColumn.Size = UDim2.new(0.5, -5, 1, 0) -- Half width, with a small gap
+                LeftColumn.Position = UDim2.new(0, 0, 0, 0)
+                LeftColumn.BackgroundTransparency = 1
+                local LeftLayout = Instance.new("UIListLayout", LeftColumn)
+                LeftLayout.Padding = UDim.new(0, 10)
+                
+                -- Create Right Column
+                local RightColumn = Instance.new("Frame", mainTab)
+                RightColumn.Name = "RightColumn"
+                RightColumn.Size = UDim2.new(0.5, -5, 1, 0)
+                RightColumn.Position = UDim2.new(0.5, 5, 0, 0)
+                RightColumn.BackgroundTransparency = 1
+                local RightLayout = Instance.new("UIListLayout", RightColumn)
+                RightLayout.Padding = UDim.new(0, 10)
+                
+                -- Distribute the items between the two columns
+                local items = mainTab:GetChildren()
+                for i, item in ipairs(items) do
+                    if item:IsA("Frame") and item.Name ~= "LeftColumn" and item.Name ~= "RightColumn" then
+                        if i % 2 == 1 then -- Odd items go to the left
+                            item.Parent = LeftColumn
+                        else -- Even items go to the right
+                            item.Parent = RightColumn
+                        end
+                    end
                 end
-                -- ------------------------------------
-
-                j0frsHub_GUI.Enabled = true
-                print("Hub loaded successfully.")
-                ToggleButton.Text = "Close Hub"
-            else
-                warn("Hub script ran, but the GUI could not be found.")
-                ToggleButton.Text = "Open Hub"
             end
+            -- ---------------------------------
+
+            j0frsHub_GUI.Enabled = true
+            ToggleButton.Text = "Close Hub"
+            print("Hub loaded successfully.")
         else
-            warn("Failed to load the hub script:", err)
+            warn("Hub script ran, but the GUI could not be found.")
             ToggleButton.Text = "Open Hub"
         end
     end
 end)
 
-print("Hub Toggle Button (Auto Resizing Edition) loaded.")
+print("Hub Toggle Button (Two-Column Edition) loaded.")
